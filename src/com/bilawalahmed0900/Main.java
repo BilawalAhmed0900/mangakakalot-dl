@@ -42,7 +42,11 @@ class ChapterParser
 
         Pattern patternTitle = Pattern.compile(patternStringForTitle);
         Matcher matcherTitle = patternTitle.matcher(html_source);
-        if (matcherTitle.find())
+
+        /*
+            First gives "Manga Online"
+         */
+        if (matcherTitle.find() && matcherTitle.find())
         {
             // 0 is everything found, 1 is (.*)
             mangaName = matcherTitle.group(1);
