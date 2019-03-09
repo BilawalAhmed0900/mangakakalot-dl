@@ -38,7 +38,7 @@ class ChapterParser
             throws RuntimeException
     {
         String mangaName;
-        String patternStringForTitle = "<title>(.+?) Manga - Mangakakalot.com</title>";
+        String patternStringForTitle = "<span itemprop=\"title\">(.+?)</span>";
 
         Pattern patternTitle = Pattern.compile(patternStringForTitle);
         Matcher matcherTitle = patternTitle.matcher(html_source);
@@ -154,14 +154,15 @@ class Mangakakalot_DL
 
 public class Main
 {
-    private static String DOMAIN_NAME = "mangakakalot.com";
+    private static String DOMAIN_NAME_1 = "mangakakalot.com";
+    private static String DOMAIN_NAME_2 = "manganelo.com";
 
     public static void main(String[] args)
             throws MalformedURLException, IOException, RuntimeException
     {
         for(String arg: args)
         {
-            if (arg.contains(DOMAIN_NAME))
+            if (arg.contains(DOMAIN_NAME_1) || arg.contains(DOMAIN_NAME_2))
             {
                 /*
                     Main class
