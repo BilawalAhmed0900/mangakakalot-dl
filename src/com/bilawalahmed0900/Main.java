@@ -76,7 +76,13 @@ class ChapterParser
         boolean found = false;
         while (matcherChapters.find())
         {
-            chapterLinks.add(matcherChapters.group(1));
+            /*
+                .5 and v2(.2) chapters not included
+             */
+            if (!matcherChapters.group(1).contains(".2") && !matcherChapters.group(1).contains(".5"))
+            {
+                chapterLinks.add(matcherChapters.group(1));
+            }
             found = true;
         }
 
