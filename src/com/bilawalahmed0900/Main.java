@@ -103,7 +103,8 @@ class ChapterParser
             ? in regex makes it lazy instead of greedy. If it is not there all chapter links are found in one because
             first one start with <span><a href=" and last one ends in </a></span>
         */
-        String patterStringForImages = "<img src=\"(.*?)\"\\s*?alt=\"(.*?)\"\\s*title=\"(.*?)\"\\s*?/>";
+        // String patterStringForImages = "<img src=\"(.*?)\"[ ]*alt=\"(.*?)\"[ ]*title=\"(.*?)\"[ ]*/>";
+        String patterStringForImages = "https://[a-zA-Z0-9.]+/mangakakalot/[a-zA-Z]+[0-9]+/[a-zA-Z0-9_]+/chapter[a-zA-Z0-9_]+/[0-9]+\\.jpg";
 
         Pattern patterImages = Pattern.compile(patterStringForImages);
         Matcher matcherImages = patterImages.matcher(html_source);
@@ -111,14 +112,8 @@ class ChapterParser
         boolean found = false;
         while (matcherImages.find())
         {
-            /*
-                Other images like logo is found too, but panel images has "chapter" in them
-             */
-            if (matcherImages.group(1).contains("chapter"))
-            {
-                imagesLinks.add(matcherImages.group(1));
-                found = true;
-            }
+            imagesLinks.add(matcherImages.group(0));
+            found = true;
         }
 
         if (!found)
