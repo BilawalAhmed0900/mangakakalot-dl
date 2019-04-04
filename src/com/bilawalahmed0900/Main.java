@@ -77,9 +77,10 @@ class ChapterParser
         while (matcherChapters.find())
         {
             /*
-                .5 and v2(.2) chapters not included
+                .1, .5 and v2(.2) chapters not included
              */
-            if (!matcherChapters.group(1).contains(".2") && !matcherChapters.group(1).contains(".5"))
+            if (!matcherChapters.group(1).contains(".1") && !matcherChapters.group(1).contains(".2")
+                    && !matcherChapters.group(1).contains(".5"))
             {
                 chapterLinks.add(matcherChapters.group(1));
             }
@@ -104,7 +105,7 @@ class ChapterParser
             first one start with <span><a href=" and last one ends in </a></span>
         */
         // String patterStringForImages = "<img src=\"(.*?)\"[ ]*alt=\"(.*?)\"[ ]*title=\"(.*?)\"[ ]*/>";
-        String patterStringForImages = "https://[a-zA-Z0-9.]+/mangakakalot/[a-zA-Z]+[0-9]+/[a-zA-Z0-9_]+/chapter[a-zA-Z0-9_]+/[0-9]+\\.jpg";
+        String patterStringForImages = "https://[a-zA-Z0-9.]+/mangakakalot/[a-zA-Z]+[0-9]+/[a-zA-Z0-9_]+/[a-zA-Z0-9_]+/[0-9]+\\.jpg";
 
         Pattern patterImages = Pattern.compile(patterStringForImages);
         Matcher matcherImages = patterImages.matcher(html_source);
