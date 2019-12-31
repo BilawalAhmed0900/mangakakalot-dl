@@ -38,18 +38,26 @@ class ChapterParser
             throws RuntimeException
     {
         String mangaName;
-        String patternStringForTitle = "<span itemprop=\"title\">(.+?)</span>";
+        String patternStringForTitleMangakakakolot = "<span itemprop=\"title\">(.+?)</span>";
+        String patternStringForTitleManganelo = "<title>(.+?) Manga Online Free - Manganelo</title>";
 
-        Pattern patternTitle = Pattern.compile(patternStringForTitle);
-        Matcher matcherTitle = patternTitle.matcher(html_source);
+        Pattern patternTitleMangakakakolot = Pattern.compile(patternStringForTitleMangakakakolot);
+        Matcher matcherTitleMangakakakolot = patternTitleMangakakakolot.matcher(html_source);
+        
+        Pattern patternTitleManganelo = Pattern.compile(patternStringForTitleManganelo);
+        Matcher matcherTitleManganelo = patternTitleManganelo.matcher(html_source);
 
         /*
             First gives "Manga Online"
          */
-        if (matcherTitle.find() && matcherTitle.find())
+        if (matcherTitleMangakakakolot.find() && matcherTitleMangakakakolot.find())
         {
             // 0 is everything found, 1 is (.*)
-            mangaName = matcherTitle.group(1);
+            mangaName = matcherTitleMangakakakolot.group(1);
+        }
+        else if (matcherTitleManganelo.find())
+        {
+            mangaName = matcherTitleManganelo.group(1);
         }
         else
         {
@@ -68,23 +76,37 @@ class ChapterParser
             ? in regex makes it lazy instead of greedy. If it is not there all chapter links are found in one because
             first one start with <span><a href=" and last one ends in </a></span>
         */
-        String patterStringForChapter = "<span><a href=\"(.+?)\" title=\"(.+?)\">(.+?)</a></span>";
+        String patterStringForChapterMangakakakolot = "<span><a href=\"(.+?)\" title=\"(.+?)\">(.+?)</a></span>";
+        String patterStringForChapterManganelo = "<a rel=\"nofollow\" class=\"chapter-name text-nowrap\" href=\"(.+?)\" title=\"(.+?)\" title=\"(.+?)\">(.+?)</a>";
 
-        Pattern patterChapters = Pattern.compile(patterStringForChapter);
-        Matcher matcherChapters = patterChapters.matcher(html_source);
+        Pattern patterChaptersMangakakakolot = Pattern.compile(patterStringForChapterMangakakakolot);
+        Matcher matcherChaptersMangakakakolot = patterChaptersMangakakakolot.matcher(html_source);
+        
+        Pattern patterChaptersManganelo = Pattern.compile(patterStringForChapterManganelo);
+        Matcher matcherChaptersManganelo = patterChaptersManganelo.matcher(html_source);
 
         boolean found = false;
-        while (matcherChapters.find())
+        while (matcherChaptersMangakakakolot.find())
         {
             /*
                 .1, .5 and v2(.2) chapters not included
              */
-            if (!matcherChapters.group(1).contains(".1") && !matcherChapters.group(1).contains(".2")
+            /*if (!matcherChapters.group(1).contains(".1") && !matcherChapters.group(1).contains(".2")
                     && !matcherChapters.group(1).contains(".5"))
             {
                 chapterLinks.add(matcherChapters.group(1));
-            }
+            }*/
+            chapterLinks.add(matcherChaptersMangakakakolot.group(1));
             found = true;
+        }
+        
+        if (!found)
+        {
+            while(matcherChaptersManganelo.find())
+            {
+                chapterLinks.add(matcherChaptersManganelo.group(1));
+                found = true;
+            }
         }
 
         if (!found)
