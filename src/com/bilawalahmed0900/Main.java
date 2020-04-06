@@ -7,8 +7,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import java.awt.image.*;
+import java.awt.Graphics;
+import javax.imageio.plugins.jpeg.JPEGImageWriteParam;
+import javax.imageio.*;
+import javax.imageio.stream.FileImageOutputStream;
+import java.awt.geom.AffineTransform;
 
 class URLDownloader
 {
@@ -39,10 +43,14 @@ class ChapterParser
     {
         String mangaName;
         String patternStringForTitleMangakakakolot = "<span itemprop=\"title\">(.+?)</span>";
+        String patternStringForTitleMangakakakolot2 = "<title>(.+?) Manga - Mangakakalot.com</title>";
         String patternStringForTitleManganelo = "<title>(.+?) Manga Online Free - Manganelo</title>";
 
         Pattern patternTitleMangakakakolot = Pattern.compile(patternStringForTitleMangakakakolot);
         Matcher matcherTitleMangakakakolot = patternTitleMangakakakolot.matcher(html_source);
+        
+        Pattern patternTitleMangakakakolot2 = Pattern.compile(patternStringForTitleMangakakakolot2);
+        Matcher matcherTitleMangakakakolot2 = patternTitleMangakakakolot2.matcher(html_source);
         
         Pattern patternTitleManganelo = Pattern.compile(patternStringForTitleManganelo);
         Matcher matcherTitleManganelo = patternTitleManganelo.matcher(html_source);
@@ -54,6 +62,10 @@ class ChapterParser
         {
             // 0 is everything found, 1 is (.*)
             mangaName = matcherTitleMangakakakolot.group(1);
+        }
+        else if (matcherTitleMangakakakolot2.find())
+        {
+            mangaName = matcherTitleMangakakakolot2.group(1);
         }
         else if (matcherTitleManganelo.find())
         {
@@ -223,71 +235,120 @@ public class Main
                 for (int chapter = 0; chapter < chapters; chapter++)
                 {
                     /*
-                        A CBZ for that chapter, file and temporary(while downloading) file for it
+                        Previous version
+                     */
+                    String chapterFileNameCBZ = mangaName + File.separator +
+                            "Chapter_" + String.format("%03d", chapter + 1) + ".cbz";
+                            
+                    /*
+                        A jpeg file for it
                      */
                     String chapterFileName = mangaName + File.separator +
-                            "Chapter_" + String.format("%03d", chapter + 1) + ".cbz";
+                            "Chapter_" + String.format("%03d", chapter + 1) + ".jpeg";
+                            
+                    File chapterFileCBZ = new File(chapterFileNameCBZ);
                     File chapterFile = new File(chapterFileName);
+                    
+                    if (chapterFileCBZ.exists() && !chapterFileCBZ.isDirectory())
+                    {
+                        continue;
+                    }
                     if (chapterFile.exists() && !chapterFile.isDirectory())
                     {
                         continue;
                     }
 
-                    File chapterFileTemp = new File(chapterFileName + "__temp");
-                    if (chapterFile.exists() && !chapterFile.isDirectory())
-                    {
-                        if (!chapterFileTemp.delete())
-                        {
-                            throw new RuntimeException("Cannot delete \"" + chapterFileName + "__temp" + "\"");
-                        }
-                    }
-
-                    /*
-                        A CBZ is a zip file
-                     */
-                    ZipOutputStream zipFile = new ZipOutputStream(new FileOutputStream(chapterFileName + "__temp"));
-
                     /*
                         Getting links of image file for that chapter
                      */
                     ArrayList<String> imageLinks = mangakakalot_dl.getImagesLinks(chapter);
+                    ArrayList<BufferedImage> images = new ArrayList<>();
                     for (int imageIndex = 0, max = imageLinks.size(); imageIndex < max; imageIndex++)
                     {
-                        /*
-                            A jpg name for that panel
-                         */
-                        String imageName = String.format("%03d", imageIndex + 1) + ".jpg";
+                        try
+                        {
+                            /*
+                                URL and Stream for that url
+                             */
+                            
+                            URL imageURl = new URL(imageLinks.get(imageIndex));
+                            InputStream IS = imageURl.openStream();
 
-                        /*
-                            Making an entry of that file in zip
-                         */
-                        zipFile.putNextEntry(new ZipEntry(imageName));
+                            /*
+                                Reading from URL and adding to List of BufferedImage's
+                             */
+                            byte[] dataBuffer = IS.readAllBytes();
+                            
+                            ByteArrayInputStream bais = new ByteArrayInputStream(dataBuffer);
+                            BufferedImage imageBuffer = ImageIO.read(bais);
+                            images.add(imageBuffer);   
+                        }
+                        catch (IOException ignore)
+                        {
+                            continue;
+                        }
 
-                        /*
-                            URL and Stream for that url
-                         */
-                        URL imageURl = new URL(imageLinks.get(imageIndex));
-                        InputStream IS = imageURl.openStream();
-
-                        /*
-                            Reading from URL and writing to zip
-                         */
-                        byte[] dataBuffer = IS.readAllBytes();
-                        zipFile.write(dataBuffer);
-                        zipFile.closeEntry();
-
-                        System.out.printf("[mangakakalot-dl] Downloading Chapter " + (chapter + 1) + "(%.2f%%)\r",
+                        System.out.printf("[mangakakalot-dl] Downloading Chapter " + (chapter + 1) + "(%06.2f%%)\r",
                                 (double)imageIndex / max * 100.0);
                     }
-
-                    zipFile.close();
-
-                    File f1 = new File(chapterFileName + "__temp");
-                    File f2 = new File(chapterFileName);
-                    if (!f1.renameTo(f2))
+                    
+                    /*
+                        maxWidth will store width of most wide pic
+                        Height will store sum of height of all images
+                     */
+                    int maxWidth = images.get(0).getWidth();
+                    int heigth = 0;
+                    for (BufferedImage image: images)
                     {
-                        throw new RuntimeException("Cannot rename files from \"" + chapterFileName + "__temp" + "\" to \"" + chapterFileName + "\"");
+                        if (image.getWidth() > maxWidth) maxWidth = image.getWidth();
+                        heigth += image.getHeight();
                     }
+                    
+                    double scaleFactor = 1.0f;
+                    if (heigth > 65000)
+                    {
+                        scaleFactor = 65000.0 / (double)heigth;
+                        heigth = 65000;
+                        maxWidth = (int)((double)maxWidth * scaleFactor);
+                        
+                        for (int i = 0; i < images.size(); i++)
+                        {
+                            BufferedImage image = images.get(i);
+                            BufferedImage after = new BufferedImage((int)(image.getWidth() * scaleFactor), 
+                                (int)(image.getHeight() * scaleFactor), BufferedImage.TYPE_INT_ARGB);
+                            AffineTransform at = AffineTransform.getScaleInstance(scaleFactor, scaleFactor);
+                            AffineTransformOp scaleOp = 
+                               new AffineTransformOp(at, AffineTransformOp.TYPE_BICUBIC);
+                            after = scaleOp.filter(image, after);
+                            
+                            images.set(i, after);
+                            image = null;
+                        }
+                    }
+                    
+                    BufferedImage result = new BufferedImage(maxWidth, heigth, BufferedImage.TYPE_INT_RGB);
+                    Graphics g = result.getGraphics();
+                    
+                    int y = 0;
+                    for (BufferedImage image: images)
+                    {
+                        /*
+                            Centered draw
+                         */
+                        g.drawImage(image, (maxWidth - image.getWidth()) / 2, y, image.getWidth(), image.getHeight(), null);
+                        y += image.getHeight();
+                    }
+                    
+                    
+                    JPEGImageWriteParam jpegParams = new JPEGImageWriteParam(null);
+                    jpegParams.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                    jpegParams.setCompressionQuality(1f);
+                    
+                    ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
+                    writer.setOutput(new FileImageOutputStream(chapterFile));
+                    writer.write(null, new IIOImage(result, null, null), jpegParams);
+                    
+                    System.out.printf("[mangakakalot-dl] Downloading Chapter " + (chapter + 1) + "(100.00%%)\r");
                 }
                 System.out.println();
             }
