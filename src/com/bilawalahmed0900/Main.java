@@ -41,42 +41,34 @@ class ChapterParser
     static String getName(String html_source)
             throws RuntimeException
     {
-        String mangaName;
-        String patternStringForTitleMangakakakolot = "<span itemprop=\"title\">(.+?)</span>";
-        String patternStringForTitleMangakakakolot2 = "<title>(.+?) Manga - Mangakakalot.com</title>";
-        String patternStringForTitleManganelo = "<title>(.+?) Manga Online Free - Manganelo</title>";
-
-        Pattern patternTitleMangakakakolot = Pattern.compile(patternStringForTitleMangakakakolot);
-        Matcher matcherTitleMangakakakolot = patternTitleMangakakakolot.matcher(html_source);
-        
-        Pattern patternTitleMangakakakolot2 = Pattern.compile(patternStringForTitleMangakakakolot2);
-        Matcher matcherTitleMangakakakolot2 = patternTitleMangakakakolot2.matcher(html_source);
-        
-        Pattern patternTitleManganelo = Pattern.compile(patternStringForTitleManganelo);
-        Matcher matcherTitleManganelo = patternTitleManganelo.matcher(html_source);
-
-        /*
-            First gives "Manga Online"
-         */
-        if (matcherTitleMangakakakolot.find() && matcherTitleMangakakakolot.find())
-        {
-            // 0 is everything found, 1 is (.*)
-            mangaName = matcherTitleMangakakakolot.group(1);
-        }
-        else if (matcherTitleMangakakakolot2.find())
-        {
-            mangaName = matcherTitleMangakakakolot2.group(1);
-        }
-        else if (matcherTitleManganelo.find())
-        {
-            mangaName = matcherTitleManganelo.group(1);
-        }
-        else
-        {
-            throw new RuntimeException("Title(<title></title>) not found");
-        }
-
-        return mangaName;
+        String[] patterns = {
+			"<span itemprop=\"title\">(.+?)</span>",
+			"<title>(.+?) Manga - Mangakakalot.com</title>",
+			"<title>(.+?) Manga Online Free - Manganelo</title>"
+		};
+		
+		for (String pattern_str: patterns)
+		{
+			Pattern pattern = Pattern.compile(pattern_str);
+			Matcher matcher = pattern.matcher(html_source);
+			
+			if (pattern_str.equals("<span itemprop=\"title\">(.+?)</span>"))
+			{
+				if (matcher.find() && matcher.find())
+				{
+					return matcher.group(1);
+				}
+			}
+			else
+			{
+				if (matcher.find())
+				{
+					return matcher.group(1);
+				}
+			}
+		}
+		
+		throw new RuntimeException("Title(<title></title>) not found");
     }
 
     static ArrayList<String> getChapterLinks(String html_source)
@@ -88,46 +80,39 @@ class ChapterParser
             ? in regex makes it lazy instead of greedy. If it is not there all chapter links are found in one because
             first one start with <span><a href=" and last one ends in </a></span>
         */
-        String patterStringForChapterMangakakakolot = "<span><a href=\"(.+?)\" title=\"(.+?)\">(.+?)</a></span>";
-        String patterStringForChapterManganelo = "<a rel=\"nofollow\" class=\"chapter-name text-nowrap\" href=\"(.+?)\" title=\"(.+?)\" title=\"(.+?)\">(.+?)</a>";
-
-        Pattern patterChaptersMangakakakolot = Pattern.compile(patterStringForChapterMangakakakolot);
-        Matcher matcherChaptersMangakakakolot = patterChaptersMangakakakolot.matcher(html_source);
-        
-        Pattern patterChaptersManganelo = Pattern.compile(patterStringForChapterManganelo);
-        Matcher matcherChaptersManganelo = patterChaptersManganelo.matcher(html_source);
-
-        boolean found = false;
-        while (matcherChaptersMangakakakolot.find())
-        {
-            /*
-                .1, .5 and v2(.2) chapters not included
-             */
-            /*if (!matcherChapters.group(1).contains(".1") && !matcherChapters.group(1).contains(".2")
-                    && !matcherChapters.group(1).contains(".5"))
-            {
-                chapterLinks.add(matcherChapters.group(1));
-            }*/
-            chapterLinks.add(matcherChaptersMangakakakolot.group(1));
-            found = true;
-        }
-        
-        if (!found)
-        {
-            while(matcherChaptersManganelo.find())
-            {
-                chapterLinks.add(matcherChaptersManganelo.group(1));
-                found = true;
-            }
-        }
-
-        if (!found)
-        {
-            throw new RuntimeException("Chapters not found");
-        }
-
-        Collections.reverse(chapterLinks);
-        return chapterLinks;
+		String[] patterns = {
+			"<span><a href=\"(.+?)\" title=\"(.+?)\">(.+?)</a></span>",
+			"<a rel=\"nofollow\" class=\"chapter-name text-nowrap\" href=\"(.+?)\" title=\"(.+?)\" title=\"(.+?)\">(.+?)</a>"
+		};
+		
+		boolean found = false;
+		for (String pattern_str: patterns)
+		{
+			Pattern pattern = Pattern.compile(pattern_str);
+			Matcher matcher = pattern.matcher(html_source);
+			
+			while (matcher.find())
+			{
+				/*
+					.1, .5 and v2(.2) chapters not included
+				 */
+				/*if (!matcherChapters.group(1).contains(".1") && !matcherChapters.group(1).contains(".2")
+						&& !matcherChapters.group(1).contains(".5"))
+				{
+					chapterLinks.add(matcherChapters.group(1));
+				}*/
+				chapterLinks.add(matcher.group(1));
+				found = true;
+			}
+			
+			if (found)
+			{
+				Collections.reverse(chapterLinks);
+				return chapterLinks;
+			}
+		}
+		
+		throw new RuntimeException("Chapters not found");
     }
 
     static ArrayList<String> getImagesLinks(String html_source)
@@ -139,24 +124,29 @@ class ChapterParser
             first one start with <span><a href=" and last one ends in </a></span>
         */
         // String patterStringForImages = "<img src=\"(.*?)\"[ ]*alt=\"(.*?)\"[ ]*title=\"(.*?)\"[ ]*/>";
-        String patterStringForImages = "https://[a-zA-Z0-9.]+/mangakakalot/[a-zA-Z]+[0-9]+/[a-zA-Z0-9_]+/[a-zA-Z0-9_]+/[0-9]+\\.jpg";
-
-        Pattern patterImages = Pattern.compile(patterStringForImages);
-        Matcher matcherImages = patterImages.matcher(html_source);
+        String[] patterns = {
+			"<img src=\"(.+?)\" alt=\".+?\" title=\".+?\" />"
+		};
 
         boolean found = false;
-        while (matcherImages.find())
-        {
-            imagesLinks.add(matcherImages.group(0));
-            found = true;
-        }
-
-        if (!found)
-        {
-            throw new RuntimeException("Images not found");
-        }
-
-        return imagesLinks;
+		for (String pattern_str: patterns)
+		{
+			Pattern pattern = Pattern.compile(pattern_str);
+			Matcher matcher = pattern.matcher(html_source);
+			
+			while (matcher.find())
+			{
+				imagesLinks.add(matcher.group(1));
+				found = true;
+			}
+			
+			if (found)
+			{
+				return imagesLinks;
+			}
+		}
+		
+		throw new RuntimeException("Images not found");
     }
 }
 
@@ -281,7 +271,10 @@ public class Main
                             
                             ByteArrayInputStream bais = new ByteArrayInputStream(dataBuffer);
                             BufferedImage imageBuffer = ImageIO.read(bais);
-                            images.add(imageBuffer);   
+                            if (imageBuffer.getWidth() > 0 && imageBuffer.getHeight() > 0)
+                            {
+                                images.add(imageBuffer);  
+                            }
                         }
                         catch (IOException ignore)
                         {
@@ -314,15 +307,18 @@ public class Main
                         for (int i = 0; i < images.size(); i++)
                         {
                             BufferedImage image = images.get(i);
-                            BufferedImage after = new BufferedImage((int)(image.getWidth() * scaleFactor), 
-                                (int)(image.getHeight() * scaleFactor), BufferedImage.TYPE_INT_ARGB);
-                            AffineTransform at = AffineTransform.getScaleInstance(scaleFactor, scaleFactor);
-                            AffineTransformOp scaleOp = 
-                               new AffineTransformOp(at, AffineTransformOp.TYPE_BICUBIC);
-                            after = scaleOp.filter(image, after);
-                            
-                            images.set(i, after);
-                            image = null;
+                            if ((int)(image.getWidth() * scaleFactor) > 0 && (int)(image.getHeight() * scaleFactor) > 0)
+                            {
+                                BufferedImage after = new BufferedImage((int)(image.getWidth() * scaleFactor), 
+                                    (int)(image.getHeight() * scaleFactor), BufferedImage.TYPE_INT_ARGB);
+                                AffineTransform at = AffineTransform.getScaleInstance(scaleFactor, scaleFactor);
+                                AffineTransformOp scaleOp = 
+                                new AffineTransformOp(at, AffineTransformOp.TYPE_BICUBIC);
+                                after = scaleOp.filter(image, after);
+                                
+                                images.set(i, after);
+                                image = null;
+                            }
                         }
                     }
                     
